@@ -1,5 +1,5 @@
 // Fichier : /api/historical.js
-// Build V1.44
+// Build V2.00
 
 export default async function handler(request, response) {
   // Définir les en-têtes CORS pour chaque réponse
