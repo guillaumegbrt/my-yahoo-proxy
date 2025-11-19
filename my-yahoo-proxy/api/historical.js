@@ -1,52 +1,80 @@
 // Fichier : /api/historical.js
 
 export default async function handler(request, response) {
-  // Définir les en-têtes CORS pour chaque réponse, y compris les erreurs.
-  // Cela autorise les requêtes depuis n'importe quelle origine. Pour plus de sécurité,
-  // vous pourriez remplacer '*' par 'https://guillaumegbrt.github.io'.
+  // Définir les en-têtes CORS pour chaque réponse
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Gérer la requête "preflight" OPTIONS que le navigateur envoie avant la vraie requête GET.
   if (request.method === 'OPTIONS') {
     return response.status(200).end();
   }
 
-  // Récupérer les paramètres de la requête (ticker, date de début, date de fin)
-  const { ticker, period1, period2 } = request.query;
+  const { provider, ticker, ...params } = request.query;
 
-  if (!ticker || !period1 || !period2) {
-    return response.status(400).json({ error: 'Les paramètres ticker, period1 et period2 sont requis.' });
+  if (!provider || !ticker) {
+    return response.status(400).json({ error: "Les paramètres 'provider' et 'ticker' sont requis." });
   }
 
-  // Construire l'URL de l'API Yahoo Finance
-  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${period1}&period2=${period2}&interval=1d&events=history`;
+  let targetUrl;
+  const queryParams = new URLSearchParams();
 
   try {
-    // Appeler l'API de Yahoo depuis le serveur
-    const yahooResponse = await fetch(yahooUrl, {
-      headers: {
-        // Il est parfois utile de simuler un navigateur pour éviter les blocages
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
+    switch (provider) {
+      case 'yahoo':
+        if (!params.period1 || !params.period2) {
+          return response.status(400).json({ error: "Pour Yahoo, 'period1' et 'period2' sont requis." });
+        }
+        targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${params.period1}&period2=${params.period2}&interval=1d&events=history`;
+        break;
 
-    if (!yahooResponse.ok) {
-      // Si Yahoo renvoie une erreur, la transmettre
-      const errorData = await yahooResponse.text();
-      return response.status(yahooResponse.status).send(errorData);
+      case 'tiingo':
+        const tiingoKey = process.env.TIINGO_API_KEY;
+        if (!tiingoKey) throw new Error("Clé API Tiingo non configurée sur le serveur.");
+        
+        const cleanTicker = ticker.split('.')[0];
+        queryParams.append('token', tiingoKey);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        targetUrl = `https://api.tiingo.com/tiingo/daily/${cleanTicker}/prices?${queryParams.toString()}`;
+        break;
+
+      case 'eod':
+        const eodKey = process.env.EOD_API_KEY;
+        if (!eodKey) throw new Error("Clé API EOD non configurée sur le serveur.");
+        
+        queryParams.append('api_token', eodKey);
+        queryParams.append('fmt', 'json');
+        targetUrl = `https://eodhistoricaldata.com/api/eod/${ticker}?${queryParams.toString()}`;
+        break;
+        
+      case 'eod_search':
+        const eodSearchKey = process.env.EOD_API_KEY;
+        if (!eodSearchKey) throw new Error("Clé API EOD non configurée sur le serveur.");
+        
+        queryParams.append('api_token', eodSearchKey);
+        targetUrl = `https://eodhistoricaldata.com/api/search/${ticker}?${queryParams.toString()}`;
+        break;
+
+      default:
+        return response.status(400).json({ error: `Fournisseur '${provider}' non supporté.` });
     }
 
-    const data = await yahooResponse.json();
+    const apiResponse = await fetch(targetUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+    });
 
-    // Mettre en cache la réponse pour 1 jour (86400 secondes)
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error(`Erreur de l'API externe (${provider}): ${errorText}`);
+      return response.status(apiResponse.status).send(errorText);
+    }
+
+    const data = await apiResponse.json();
     response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
-
-    // Renvoyer les données au format JSON
     return response.status(200).json(data);
 
   } catch (error) {
-    return response.status(500).json({ error: 'Erreur interne du serveur proxy.' });
+    console.error(`Erreur interne du proxy pour le provider '${provider}':`, error);
+    return response.status(500).json({ error: `Erreur interne du proxy: ${error.message}` });
   }
 }
