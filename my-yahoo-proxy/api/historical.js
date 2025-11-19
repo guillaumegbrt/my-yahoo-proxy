@@ -27,29 +27,10 @@ export default async function handler(request, response) {
         }
         targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${params.period1}&period2=${params.period2}&interval=1d&events=history`;
         break;
-
-      case 'tiingo':
-        const tiingoKey = process.env.TIINGO_API_KEY;
-        if (!tiingoKey) throw new Error("Clé API Tiingo non configurée sur le serveur.");
-        
-        const cleanTicker = ticker.split('.')[0];
-        queryParams.append('token', tiingoKey);
-        if (params.startDate) queryParams.append('startDate', params.startDate);
-        targetUrl = `https://api.tiingo.com/tiingo/daily/${cleanTicker}/prices?${queryParams.toString()}`;
-        break;
-
-      case 'eod':
-        const eodKey = process.env.EOD_API_KEY;
-        if (!eodKey) throw new Error("Clé API EOD non configurée sur le serveur.");
-        
-        queryParams.append('api_token', eodKey);
-        queryParams.append('fmt', 'json');
-        targetUrl = `https://eodhistoricaldata.com/api/eod/${ticker}?${queryParams.toString()}`;
-        break;
         
       case 'eod_search':
         const eodSearchKey = process.env.EOD_API_KEY;
-        if (!eodSearchKey) throw new Error("Clé API EOD non configurée sur le serveur.");
+        if (!eodSearchKey) throw new Error("Clé API EOD non configurée sur le serveur pour la recherche.");
         
         queryParams.append('api_token', eodSearchKey);
         targetUrl = `https://eodhistoricaldata.com/api/search/${ticker}?${queryParams.toString()}`;
