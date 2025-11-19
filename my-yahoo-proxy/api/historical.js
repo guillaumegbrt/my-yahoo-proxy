@@ -1,6 +1,18 @@
 // Fichier : /api/historical.js
 
 export default async function handler(request, response) {
+  // Définir les en-têtes CORS pour chaque réponse, y compris les erreurs.
+  // Cela autorise les requêtes depuis n'importe quelle origine. Pour plus de sécurité,
+  // vous pourriez remplacer '*' par 'https://guillaumegbrt.github.io'.
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Gérer la requête "preflight" OPTIONS que le navigateur envoie avant la vraie requête GET.
+  if (request.method === 'OPTIONS') {
+    return response.status(200).end();
+  }
+
   // Récupérer les paramètres de la requête (ticker, date de début, date de fin)
   const { ticker, period1, period2 } = request.query;
 
@@ -28,15 +40,13 @@ export default async function handler(request, response) {
 
     const data = await yahooResponse.json();
 
-    // Ajouter les en-têtes CORS pour autoriser l'appel depuis votre github.io
-    response.setHeader('Access-Control-Allow-Origin', '*'); // Ou mettez l'URL de votre github.io pour plus de sécurité
-    response.setHeader('Access-Control-Allow-Methods', 'GET');
-    response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate'); // Mettre en cache la réponse pour 1 jour
+    // Mettre en cache la réponse pour 1 jour (86400 secondes)
+    response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
 
     // Renvoyer les données au format JSON
     return response.status(200).json(data);
 
   } catch (error) {
-    return response.status(500).json({ error: 'Erreur interne du serveur.' });
+    return response.status(500).json({ error: 'Erreur interne du serveur proxy.' });
   }
 }
