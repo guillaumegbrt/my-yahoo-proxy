@@ -1,4 +1,5 @@
 // Fichier : /api/historical.js
+// Build V1.41
 
 export default async function handler(request, response) {
   // Définir les en-têtes CORS pour chaque réponse
@@ -26,6 +27,10 @@ export default async function handler(request, response) {
           return response.status(400).json({ error: "Pour Yahoo, 'period1' et 'period2' sont requis." });
         }
         targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${params.period1}&period2=${params.period2}&interval=1d&events=history`;
+        break;
+
+      case 'yahoo_search':
+        targetUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${ticker}`;
         break;
         
       case 'eod_search':
