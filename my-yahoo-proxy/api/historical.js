@@ -29,10 +29,11 @@ export default async function handler(request, response) {
         break;
         
       case 'eod_search':
-        const eodSearchKey = process.env.EOD_API_KEY;
-        if (!eodSearchKey) throw new Error("Clé API EOD non configurée sur le serveur pour la recherche.");
+        // Use the EOD API key from environment variables, or fallback to the 'demo' key.
+        const eodSearchKey = process.env.EOD_API_KEY || 'demo';
         
         queryParams.append('api_token', eodSearchKey);
+        queryParams.append('fmt', 'json'); // Ensure JSON format
         targetUrl = `https://eodhistoricaldata.com/api/search/${ticker}?${queryParams.toString()}`;
         break;
 
