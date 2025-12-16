@@ -1,5 +1,5 @@
 // Fichier : /api/historical.js
-// Build V2.02
+// Build V2.02.1
 
 export default async function handler(request, response) {
   // Définir les en-têtes CORS pour chaque réponse
@@ -64,4 +64,5 @@ export default async function handler(request, response) {
     console.error(`Erreur interne du proxy pour le provider '${provider}':`, error);
     return response.status(500).json({ error: `Erreur interne du proxy: ${error.message}` });
   }
+
 }
